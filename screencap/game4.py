@@ -76,7 +76,7 @@ def compare_hash(hash1, hash2):
     return 1.0 - n / len(hash1)
 
 
-def detect_blocks():
+def detect_fill_blocks():
     """
     利用图像识别技术输出命名方块矩阵
     :return:
@@ -96,8 +96,8 @@ def detect_blocks():
         for j in range(0, y_count):
             x, y = i * x_size, j * y_size
             img = cropped[y + padding:y + y_size - padding, x + padding:x + x_size - padding]
-            path = f'{root_dir}/z_out_{i}-{j}.jpg'
-            cv2.imwrite(path, img)
+            # path = f'{root_dir}/z_out_{i}-{j}.jpg'
+            # cv2.imwrite(path, img)
             results.append((i, j, calc_hist(img), calc_hash(img)))
 
     # 相同图片分组
@@ -118,10 +118,7 @@ def detect_blocks():
         if not to_group:
             groups_list.append([result])
 
-    blocks = []
-    for x in range(0, x_count):
-        blocks.append(['' for j in range(0, y_count)])
-
+    # 填充blocks
     print()
     group_index = 0
     for groups in groups_list:
@@ -130,21 +127,70 @@ def detect_blocks():
         print(f'{name}: ', end='')
         for result in groups:
             print(f'({result[0]},{result[1]}) ', end='')
-            blocks[result[0]][result[1]] = name
+            blocks[result[0]][result[1]][0] = name
         print()
 
     print()
-    print('-------------------------------------------------------------')
+    print('      0     1     2     3     4     5     6     7     8     9   ')
+    print('   -------------------------------------------------------------')
     for y in range(0, y_count):
-        print('|', end='')
+        print(f'{"%02d" % y} |', end='')
         for x in range(0, x_count):
-            name = blocks[x][y]
+            name = blocks[x][y][0]
             print(f' {name} |', end='')
         print()
-        print('-------------------------------------------------------------')
+        print('   -------------------------------------------------------------')
 
-    return blocks
+
+def game_travel_blocks():
+    for y in range(0, y_count):
+        for x in range(0, x_count):
+            if blocks[x][y][1]:
+                yield x, y
+
+
+def game_check_success():
+    for x_blocks in blocks:
+        for block in x_blocks:
+            if block[1]:
+                return False
+    return True
+
+
+def game_find_same_block(x, y):
+    results = []
+    name = blocks[x][y][0]
+    for i in range(x + 1, x_count):
+        name2 = blocks[i][y][0]
+        if len(name2) == 0:
+            continue
+        if name == name2:
+            results.append((i, y))
+        break
+    for j in range(y + 1, y_count):
+        name2 = blocks[x][j][0]
+        if len(name2) == 0:
+            continue
+        if name == name2:
+            results.append((x, j))
+        break
+    return results
+
+
+def game_start():
+    if game_check_success():
+        return
+    for x, y in game_travel_blocks():
+        f_blocks = game_find_same_block(x, y)
+        for block in f_blocks:
+            print(f'({x}, {y}) -> {block}')
 
 
 if __name__ == '__main__':
-    detect_blocks()
+    # block: [x][y][0:name, 1:active]
+    blocks = []
+    for _ in range(0, x_count):
+        blocks.append([['', True] for j in range(0, y_count)])
+
+    detect_fill_blocks()
+    game_start()
