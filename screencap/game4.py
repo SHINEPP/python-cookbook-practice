@@ -5,17 +5,35 @@ channels = [0, 1, 2]
 hist_size = [8, 8, 8]
 ranges = [0, 256, 0, 256, 0, 256]
 
+x_count = 10
+y_count = 14
+
 
 def calc_hist(img):
+    """
+    直方图
+    :param img:
+    :return:
+    """
     return cv2.calcHist([img], channels, None, hist_size, ranges)
 
 
 def compare_hist(hist1, hist2):
+    """
+    直方图对比，[0,1] 值越大越相似
+    :param hist1:
+    :param hist2:
+    :return:
+    """
     return cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
 
 
 def calc_hash(img):
-    # 感知哈希算法
+    """
+    感知哈希算法
+    :param img:
+    :return:
+    """
     # 缩放32*32
     img = cv2.resize(img, (32, 32), interpolation=cv2.INTER_CUBIC)
 
@@ -38,10 +56,14 @@ def calc_hash(img):
 
 
 def compare_hash(hash1, hash2):
-    # Hash值对比
-    # 算法中1和0顺序组合起来的即是图片的指纹hash。顺序不固定，但是比较的时候必须是相同的顺序。
-    # 对比两幅图的指纹，计算汉明距离，即两个64位的hash值有多少是不一样的，不同的位数越小，图片越相似
-    # 汉明距离：一组二进制数据变成另一组数据所需要的步骤，可以衡量两图的差异，汉明距离越小，则相似度越高。汉明距离为0，即两张图片完全一样
+    """
+    Hash值对比, [0,1] 值越大越相似
+    算法中1和0顺序组合起来的即是图片的指纹hash。顺序不固定，但是比较的时候必须是相同的顺序。
+    对比两幅图的指纹，计算汉明距离，即两个64位的hash值有多少是不一样的，不同的位数越小，图片越相似
+    :param hash1:
+    :param hash2:
+    :return:
+    """
     n = 0
     # hash长度不同则返回-1代表传参出错
     if len(hash1) != len(hash2):
@@ -54,9 +76,11 @@ def compare_hash(hash1, hash2):
     return 1.0 - n / len(hash1)
 
 
-def main():
-    x_count = 10
-    y_count = 14
+def find_blocks():
+    """
+    利用图像识别技术输出命名方块矩阵
+    :return:
+    """
     root_dir = '/Users/zhouzhenliang/Desktop/zlz/'
     img = cv2.imread(f'{root_dir}/src_1.jpg')
     print(f'srcImage = {img.shape}')
@@ -118,6 +142,8 @@ def main():
         print()
         print('-------------------------------------------------------------')
 
+    return blocks
+
 
 if __name__ == '__main__':
-    main()
+    find_blocks()
