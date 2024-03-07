@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 channels = [0, 1, 2]
 hist_size = [8, 8, 8]
@@ -11,6 +12,46 @@ def calc_hist(img):
 
 def compare_hist(hist1, hist2):
     return cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+
+
+def calc_hash(img):
+    # 感知哈希算法
+    # 缩放32*32
+    img = cv2.resize(img, (32, 32), interpolation=cv2.INTER_CUBIC)
+
+    # 转换为灰度图
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # 将灰度图转为浮点型，再进行dct变换
+    dct = cv2.dct(np.float32(gray))
+    # opencv实现的掩码操作
+    dct_roi = dct[0:8, 0:8]
+
+    hash_v = []
+    average = np.mean(dct_roi)
+    for i in range(dct_roi.shape[0]):
+        for j in range(dct_roi.shape[1]):
+            if dct_roi[i, j] > average:
+                hash_v.append(1)
+            else:
+                hash_v.append(0)
+    return hash_v
+
+
+def compare_hash(hash1, hash2):
+    # Hash值对比
+    # 算法中1和0顺序组合起来的即是图片的指纹hash。顺序不固定，但是比较的时候必须是相同的顺序。
+    # 对比两幅图的指纹，计算汉明距离，即两个64位的hash值有多少是不一样的，不同的位数越小，图片越相似
+    # 汉明距离：一组二进制数据变成另一组数据所需要的步骤，可以衡量两图的差异，汉明距离越小，则相似度越高。汉明距离为0，即两张图片完全一样
+    n = 0
+    # hash长度不同则返回-1代表传参出错
+    if len(hash1) != len(hash2):
+        return 0
+    # 遍历判断
+    for i in range(len(hash1)):
+        # 不相等则n计数+1，n最终为相似度
+        if hash1[i] != hash2[i]:
+            n = n + 1
+    return 1.0 - n / len(hash1)
 
 
 def main():
@@ -33,19 +74,24 @@ def main():
             img = cropped[y + padding:y + y_size - padding, x + padding:x + x_size - padding]
             path = f'{root_dir}/z_out_{i}-{j}.jpg'
             cv2.imwrite(path, img)
-            results.append((i, j, calc_hist(img)))
+            results.append((i, j, calc_hist(img), calc_hash(img)))
 
     # 相同图片分组
     groups_list = []
     for result in results:
-        have_group = False
+        to_group = False
         for groups in groups_list:
-            if len(groups) > 0:
-                score = compare_hist(result[2], groups[0][2])
-                if score > 0.999:
-                    groups.append(result)
-                    have_group = True
-        if not have_group:
+            if len(groups) == 0:
+                continue
+            scope_scope = compare_hist(result[2], groups[0][2])
+            if scope_scope < 0.99:
+                continue
+            scope_hash = compare_hash(result[3], groups[0][3])
+            if scope_hash < 0.8:
+                continue
+            groups.append(result)
+            to_group = True
+        if not to_group:
             groups_list.append([result])
 
     for groups in groups_list:
