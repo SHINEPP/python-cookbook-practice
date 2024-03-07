@@ -94,10 +94,29 @@ def main():
         if not to_group:
             groups_list.append([result])
 
+    blocks = []
+    for x in range(0, x_count):
+        blocks.append(['' for j in range(0, y_count)])
+
+    group_index = 0
     for groups in groups_list:
-        for vs in groups:
-            print(f'{vs[0]},{vs[1]}  ', end='')
+        group_index += 1
+        name = f'B{"%02d" % group_index}'
+        print(f'{name}: ', end='')
+        for result in groups:
+            print(f'({result[0]},{result[1]}) ', end='')
+            blocks[result[0]][result[1]] = name
         print()
+
+    print()
+    print('-------------------------------------------------------------')
+    for y in range(0, y_count):
+        print('|', end='')
+        for x in range(0, x_count):
+            name = blocks[x][y]
+            print(f' {name} |', end='')
+        print()
+        print('-------------------------------------------------------------')
 
 
 if __name__ == '__main__':
