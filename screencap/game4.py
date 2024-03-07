@@ -158,32 +158,46 @@ def game_check_success():
 
 
 def game_find_same_block(x, y):
-    results = []
+    position = []
     name = blocks[x][y][0]
     for i in range(x + 1, x_count):
-        name2 = blocks[i][y][0]
-        if len(name2) == 0:
+        if not blocks[i][y][1]:
             continue
-        if name == name2:
-            results.append((i, y))
+        if name == blocks[i][y][0]:
+            position.append((i, y))
         break
     for j in range(y + 1, y_count):
-        name2 = blocks[x][j][0]
-        if len(name2) == 0:
+        if not blocks[x][j][1]:
             continue
-        if name == name2:
-            results.append((x, j))
+        if name == blocks[x][j][0]:
+            position.append((x, j))
         break
-    return results
+    return position
+
+
+g_steps = []
 
 
 def game_start():
     if game_check_success():
-        return
+        print('success')
+        print('----------------------------')
+        for p in g_steps:
+            print(p)
+        return True
     for x, y in game_travel_blocks():
-        f_blocks = game_find_same_block(x, y)
-        for block in f_blocks:
-            print(f'({x}, {y}) -> {block}')
+        positions = game_find_same_block(x, y)
+        for x1, y1 in positions:
+            step = f'({x},{y}) -> ({x1},{y1})'
+            g_steps.append(step)
+            blocks[x][y][1] = False
+            blocks[x1][y1][1] = False
+            if game_start():
+                return True
+            blocks[x][y][1] = True
+            blocks[x1][y1][1] = True
+            g_steps.pop()
+    return False
 
 
 if __name__ == '__main__':
@@ -193,4 +207,5 @@ if __name__ == '__main__':
         blocks.append([['', True] for j in range(0, y_count)])
 
     detect_fill_blocks()
+
     game_start()

@@ -10,3 +10,6 @@ if __name__ == '__main__':
     os.system(f'adb shell screencap -p {phone_dir}/{ftime}.png')
     os.system(f'adb pull {phone_dir}/{ftime}.png {local_dir}')
     os.system(f'adb shell rm -f {phone_dir}/{ftime}.png')
+
+    for i in range(10, 10):
+        print(f'i = {i}')
