@@ -142,11 +142,24 @@ def detect_fill_blocks():
         print('   -------------------------------------------------------------')
 
 
-def game_travel_blocks():
+def game_travel_active_blocks():
     for y in range(0, y_count):
         for x in range(0, x_count):
             if blocks[x][y][1]:
                 yield x, y
+
+
+def game_can_move_block(x, y, dx, dy):
+    if dx == 0 and dy == 0:
+        return True
+    x1 = x + dx
+    y1 = y + dy
+    if x1 < 0 or x1 >= x_count or y1 < 0 or y1:
+        return False
+    block = blocks[x1][y]
+    if not block[1]:
+        return True
+    return game_can_move_block(x1, y, dx, dy)
 
 
 def game_check_success():
@@ -186,7 +199,7 @@ def game_start():
         return True
 
     can_forward = False
-    for x, y in game_travel_blocks():
+    for x, y in game_travel_active_blocks():
         positions = game_find_same_block(x, y)
         if len(positions) > 0:
             can_forward = True
@@ -198,18 +211,25 @@ def game_start():
             print(p)
         return False
 
-    for x, y in game_travel_blocks():
-        positions = game_find_same_block(x, y)
-        for x1, y1 in positions:
-            step = f'({x},{y}) -> ({x1},{y1})'
-            g_steps.append(step)
-            blocks[x][y][1] = False
-            blocks[x1][y1][1] = False
-            if game_start():
-                return True
-            blocks[x][y][1] = True
-            blocks[x1][y1][1] = True
-            g_steps.pop()
+    for x, y in game_travel_active_blocks():
+        for dx in range(0, x_count - x):
+            for dy in range(0, y_count - y):
+                can_move = game_can_move_block(x, y, dx, dy)
+
+
+                positions = game_find_same_block(x, y)
+                for x1, y1 in positions:
+                    step = f'({x},{y}) -> ({x1},{y1})'
+                    g_steps.append(step)
+                    blocks[x][y][1] = False
+                    blocks[x1][y1][1] = False
+                    if game_start():
+                        return True
+                    blocks[x][y][1] = True
+                    blocks[x1][y1][1] = True
+                    g_steps.pop()
+                if can_move:
+
     return False
 
 
