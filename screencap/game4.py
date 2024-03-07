@@ -180,11 +180,24 @@ g_steps = []
 
 def game_start():
     if game_check_success():
-        print('success')
-        print('----------------------------')
+        print('------------- success ---------------')
         for p in g_steps:
             print(p)
         return True
+
+    can_forward = False
+    for x, y in game_travel_blocks():
+        positions = game_find_same_block(x, y)
+        if len(positions) > 0:
+            can_forward = True
+            break
+
+    if not can_forward:
+        print('------------- can\'t forward ---------------')
+        for p in g_steps:
+            print(p)
+        return False
+
     for x, y in game_travel_blocks():
         positions = game_find_same_block(x, y)
         for x1, y1 in positions:
