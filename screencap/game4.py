@@ -76,7 +76,7 @@ def compare_hash(hash1, hash2):
     return 1.0 - n / len(hash1)
 
 
-def find_blocks():
+def detect_blocks():
     """
     利用图像识别技术输出命名方块矩阵
     :return:
@@ -122,6 +122,7 @@ def find_blocks():
     for x in range(0, x_count):
         blocks.append(['' for j in range(0, y_count)])
 
+    print()
     group_index = 0
     for groups in groups_list:
         group_index += 1
@@ -146,4 +147,4 @@ def find_blocks():
 
 
 if __name__ == '__main__':
-    find_blocks()
+    detect_blocks()
