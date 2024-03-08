@@ -193,11 +193,11 @@ def is_block2block_y_near(x1, y1, x2, y2):
 def resolve_block2block_move_y(x1, y1, x2, y2):
     # 水平直接想通
     if is_block2block_x_near(x1, y1, x2, y2):
-        return True, 0, 0, []
+        return True, 0, []
 
     # 竖直方向移动也不可能水平相同
     if not is_block2block_x_near(x1, y2, x2, y2):
-        return False, 0, 0, None
+        return False, 0, None
 
     dy = y2 - y1
     if dy < 0:
@@ -209,9 +209,9 @@ def resolve_block2block_move_y(x1, y1, x2, y2):
             m_positions.append((x1, y))
         block = m_positions[-1]
         if block[1] + dy >= 0:
-            return True, 0, dy, m_positions[1:]
+            return True, dy, m_positions[1:]
         else:
-            return False, 0, 0, None
+            return False, 0, None
 
     # 下移
     m_positions = [(x1, y1)]
@@ -221,28 +221,20 @@ def resolve_block2block_move_y(x1, y1, x2, y2):
         m_positions.append((x1, y))
     block = m_positions[-1]
     if block[1] + dy < y_count:
-        return True, 0, dy, m_positions[1:]
+        return True, dy, m_positions[1:]
     else:
-        return False, 0, 0, None
+        return False, 0, None
 
 
 # 水平移动，竖直消除
 def resolve_block2block_move_x(x1, y1, x2, y2):
-    # 水平想通
-    if is_block2block_x_near(x1, y1, x2, y2):
-        return True, 0, 0, []
-
-    # 竖直想通
+    # 竖直直接想通
     if is_block2block_y_near(x1, y1, x2, y2):
-        return True, 0, 0, []
+        return True, 0, []
 
     # 水平方向移动也不可能竖直相同
     if not is_block2block_y_near(x2, y1, x2, y2):
-        return False, 0, 0, None
-
-    # 竖直方向移动也不可能水平相同
-    if not is_block2block_x_near(x1, y2, x2, y2):
-        return False, 0, 0, None
+        return False, 0, None
 
     dx = x2 - x1
     if dx < 0:
@@ -254,9 +246,9 @@ def resolve_block2block_move_x(x1, y1, x2, y2):
             m_positions.append((x, y1))
         block = m_positions[-1]
         if block[0] + dx >= 0:
-            return True, dx, 0, m_positions[1:]
+            return True, dx, m_positions[1:]
         else:
-            return False, 0, 0, None
+            return False, 0, None
 
     # 右移
     m_positions = [(x1, y1)]
@@ -266,9 +258,9 @@ def resolve_block2block_move_x(x1, y1, x2, y2):
         m_positions.append((x, y1))
     block = m_positions[-1]
     if block[0] + dx < x_count:
-        return True, dx, 0, m_positions[1:]
+        return True, dx, m_positions[1:]
     else:
-        return False, 0, 0, None
+        return False, 0, None
 
 
 def start_game():
@@ -279,7 +271,7 @@ def start_game():
     can_next = False
     for x1, y1 in travel_game_active_blocks():
         for x2, y2 in travel_game_same_blocks(x1, y1):
-
+            # 竖直移动
             result, dy, m_positions = resolve_block2block_move_y(x1, y1, x2, y2)
             if not result:
                 continue
@@ -296,6 +288,24 @@ def start_game():
             blocks[x1][y1] = name
             blocks[x2][y2] = name
 
+        for x2, y2 in travel_game_same_blocks(x1, y1):
+            # 水平移动
+            result, dx, m_positions = resolve_block2block_move_x(x1, y1, x2, y2)
+            if not result:
+                continue
+            can_next = True
+            name = blocks[x1][y1]
+            blocks[x1][y1] = ''
+            blocks[x2][y2] = ''
+            for mx, my in m_positions:
+                blocks[mx + dx][my] = blocks[mx][my]
+            if start_game():
+                return True
+            for mx, my in m_positions:
+                blocks[mx][my] = blocks[mx + dx][my]
+            blocks[x1][y1] = name
+            blocks[x2][y2] = name
+
     if not can_next:
         print('can\'t next')
     return False
@@ -304,4 +314,4 @@ def start_game():
 if __name__ == '__main__':
     blocks = [['' for _ in range(0, y_count)] for _ in range(0, x_count)]
     detect_fill_blocks()
-    # start_game()
+    start_game()
