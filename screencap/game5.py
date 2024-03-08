@@ -1,3 +1,5 @@
+import sys
+
 import cv2
 import numpy as np
 
@@ -263,55 +265,60 @@ def resolve_block2block_move_x(x1, y1, x2, y2):
         return False, 0, None
 
 
-def start_game():
+actions = []
+
+
+def start_game(deep):
     if check_game_success():
-        print('game success')
+        print('--------------------------- game success ---------------------------')
+        for action in actions:
+            print(action)
         return True
 
-    can_next = False
     for x1, y1 in travel_game_active_blocks():
         for x2, y2 in travel_game_same_blocks(x1, y1):
             # 竖直移动
             result, dy, m_positions = resolve_block2block_move_y(x1, y1, x2, y2)
             if not result:
                 continue
-            can_next = True
+            actions.append(f'({x1}, {y1}) - ({x2}, {y2})')
             name = blocks[x1][y1]
             blocks[x1][y1] = ''
             blocks[x2][y2] = ''
             for mx, my in m_positions:
                 blocks[mx][my + dy] = blocks[mx][my]
-            if start_game():
+            if start_game(deep + 1):
                 return True
             for mx, my in m_positions:
                 blocks[mx][my] = blocks[mx][my + dy]
             blocks[x1][y1] = name
             blocks[x2][y2] = name
+            actions.pop()
 
         for x2, y2 in travel_game_same_blocks(x1, y1):
             # 水平移动
             result, dx, m_positions = resolve_block2block_move_x(x1, y1, x2, y2)
             if not result:
                 continue
-            can_next = True
+            actions.append(f'({x1}, {y1}) - ({x2}, {y2})')
             name = blocks[x1][y1]
             blocks[x1][y1] = ''
             blocks[x2][y2] = ''
             for mx, my in m_positions:
                 blocks[mx + dx][my] = blocks[mx][my]
-            if start_game():
+            if start_game(deep + 1):
                 return True
             for mx, my in m_positions:
                 blocks[mx][my] = blocks[mx + dx][my]
             blocks[x1][y1] = name
             blocks[x2][y2] = name
+            actions.pop()
 
-    if not can_next:
-        print('can\'t next')
     return False
 
 
 if __name__ == '__main__':
+    sys.setrecursionlimit(1000000)
     blocks = [['' for _ in range(0, y_count)] for _ in range(0, x_count)]
     detect_fill_blocks()
-    start_game()
+    start_game(0)
