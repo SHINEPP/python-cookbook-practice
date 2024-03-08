@@ -127,7 +127,7 @@ def detect_fill_blocks():
         print(f'{name}: ', end='')
         for result in groups:
             print(f'({result[0]},{result[1]}) ', end='')
-            blocks[result[0]][result[1]][0] = name
+            blocks[result[0]][result[1]]['name'] = name
         print()
 
     print()
@@ -136,115 +136,125 @@ def detect_fill_blocks():
     for y in range(0, y_count):
         print(f'{"%02d" % y} |', end='')
         for x in range(0, x_count):
-            name = blocks[x][y][0]
+            name = blocks[x][y]['name']
             print(f' {name} |', end='')
         print()
         print('   -------------------------------------------------------------')
 
 
-def game_check_success():
-    for x_blocks in blocks:
-        for block in x_blocks:
-            if block[1]:
-                return False
+def check_game_success():
+    for x, y in travel_game_blocks():
+        if blocks[x][y]['active']:
+            return False
     return True
 
 
-def game_travel_active_blocks():
-    for y in range(0, y_count):
-        for x in range(0, x_count):
-            if blocks[x][y][1]:
-                yield x, y
+def travel_game_blocks():
+    for x in range(0, x_count):
+        for y in range(0, y_count):
+            yield x, y
 
 
-def game_can_move_block(x, y, dx, dy):
-    if dx == 0 and dy == 0:
-        return True
-    x1 = x + dx
-    y1 = y + dy
-    if x1 < 0 or x1 >= x_count or y1 < 0 or y1:
+def travel_game_active_blocks():
+    for x, y in travel_game_blocks():
+        if blocks[x][y]['active']:
+            yield x, y
+
+
+def travel_game_same_blocks(x, y):
+    for i, j in travel_game_active_blocks():
+        if x == i and y == j:
+            continue
+        if blocks[x][y]['name'] == blocks[i][j]['name']:
+            yield i, j
+
+
+# 水平方向是否挨着
+def is_block2block_x_near(x1, y1, x2, y2):
+    if y1 != y2:
         return False
-    if not blocks[x1][y][1]:
-        return True
-    return game_can_move_block(x1, y1, dx, dy)
+    for x in range(min(x1, x2) + 1, max(x1, x2)):
+        if blocks[x][y1]['active']:
+            return False
+    return True
 
 
-def game_move_block(x, y, dx, dy):
-    if dx == 0 and dy == 0:
-        return
-    x1 = x + dx
-    y1 = y + dy
-    game_move_block(x)
+# 竖直方向是否挨着
+def is_block2block_y_near(x1, y1, x2, y2):
+    if x1 != x2:
+        return False
+    for y in range(min(y1, y2) + 1, max(y1, y2)):
+        if blocks[x1][y]['active']:
+            return False
+    return True
 
 
-def game_find_same_block(x, y):
-    position = []
-    name = blocks[x][y][0]
-    for i in range(x + 1, x_count):
-        if not blocks[i][y][1]:
-            continue
-        if name == blocks[i][y][0]:
-            position.append((i, y))
-        break
-    for j in range(y + 1, y_count):
-        if not blocks[x][j][1]:
-            continue
-        if name == blocks[x][j][0]:
-            position.append((x, j))
-        break
-    return position
+def resolve_move_y(x, y, dy):
+    pass
 
 
-g_steps = []
+# 竖直移动，消除水平方向
+def resolve_block2block_move_y(x1, y1, x2, y2):
+    # 水平直接想通
+    if is_block2block_x_near(x1, y1, x2, y2):
+        return 0, []
 
+    # 竖直方向移动也不可能水平相同
+    if not is_block2block_x_near(x1, y2, x2, y2):
+        return 0, None
 
-def game_start():
-    if game_check_success():
-        print('------------- success ---------------')
-        for p in g_steps:
-            print(p)
-        return True
+    dy = y2 - y1
+    if dy < 0:
+        # 上移
+        y_blocks = [(x1, y1)]
+        for y in range(y1 - 1, -1, -1):
+            if not blocks[x1][y]['active']:
+                break
+            y_blocks.append((x1, y))
+        block = y_blocks[-1]
+        if block[1] + dy >= 0:
+            return dy, y_blocks[1:]
+        else:
+            return 0, None
 
-    can_forward = False
-    for x, y in game_travel_active_blocks():
-        positions = game_find_same_block(x, y)
-        if len(positions) > 0:
-            can_forward = True
+    # 下移
+    y_blocks = [(x1, y1)]
+    for y in range(y1 + 1, y_count):
+        if not blocks[x1][y]['active']:
             break
-
-    if not can_forward:
-        print('------------- can\'t forward ---------------')
-        for p in g_steps:
-            print(p)
-        return False
-
-    for x, y in game_travel_active_blocks():
-        for dx in range(0, x_count - x):
-            for dy in range(0, y_count - y):
-                can_move = game_can_move_block(x, y, dx, dy)
-
-                positions = game_find_same_block(x, y)
-                for x1, y1 in positions:
-                    step = f'({x},{y}) -> ({x1},{y1})'
-                    g_steps.append(step)
-                    blocks[x][y][1] = False
-                    blocks[x1][y1][1] = False
-                    if game_start():
-                        return True
-                    blocks[x][y][1] = True
-                    blocks[x1][y1][1] = True
-                    g_steps.pop()
+        y_blocks.append((x1, y))
+    block = y_blocks[-1]
+    if block[1] + dy < y_count:
+        return dy, y_blocks[1:]
+    else:
+        return 0, None
 
 
+def back_resolve_block_to_block(x1, y1, x2, y2):
+    return True
+
+
+def start_game():
+    if check_game_success():
+        print('game success')
+        return True
+
+    can_next = False
+    for x1, y1 in travel_game_active_blocks():
+        for x2, y2 in travel_game_same_blocks(x1, y1):
+            result = resolve_block2block_move_y(x1, y1, x2, y2)
+            if result:
+                can_next = True
+                if start_game():
+                    return True
+            back_resolve_block_to_block(x1, y1, x2, y2)
+
+    if not can_next:
+        print('can\'t next')
     return False
 
 
 if __name__ == '__main__':
-    # block: [x][y][0:name, 1:active]
-    blocks = []
-    for _ in range(0, x_count):
-        blocks.append([['', True] for j in range(0, y_count)])
-
+    blocks = [[{'name': '', 'active': True} for _ in range(0, y_count)] for _ in range(0, x_count)]
     detect_fill_blocks()
-
-    game_start()
+    start_game()
