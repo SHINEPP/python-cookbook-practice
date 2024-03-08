@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
 
-channels = [0, 1, 2]
+hist_channels = [0, 1, 2]
 hist_size = [8, 8, 8]
-ranges = [0, 256, 0, 256, 0, 256]
+hist_ranges = [0, 256, 0, 256, 0, 256]
 
 x_count = 10
 y_count = 14
@@ -15,7 +15,7 @@ def calc_hist(img):
     :param img:
     :return:
     """
-    return cv2.calcHist([img], channels, None, hist_size, ranges)
+    return cv2.calcHist([img], hist_channels, None, hist_size, hist_ranges)
 
 
 def compare_hist(hist1, hist2):
@@ -142,6 +142,14 @@ def detect_fill_blocks():
         print('   -------------------------------------------------------------')
 
 
+def game_check_success():
+    for x_blocks in blocks:
+        for block in x_blocks:
+            if block[1]:
+                return False
+    return True
+
+
 def game_travel_active_blocks():
     for y in range(0, y_count):
         for x in range(0, x_count):
@@ -156,18 +164,17 @@ def game_can_move_block(x, y, dx, dy):
     y1 = y + dy
     if x1 < 0 or x1 >= x_count or y1 < 0 or y1:
         return False
-    block = blocks[x1][y]
-    if not block[1]:
+    if not blocks[x1][y][1]:
         return True
-    return game_can_move_block(x1, y, dx, dy)
+    return game_can_move_block(x1, y1, dx, dy)
 
 
-def game_check_success():
-    for x_blocks in blocks:
-        for block in x_blocks:
-            if block[1]:
-                return False
-    return True
+def game_move_block(x, y, dx, dy):
+    if dx == 0 and dy == 0:
+        return
+    x1 = x + dx
+    y1 = y + dy
+    game_move_block(x)
 
 
 def game_find_same_block(x, y):
@@ -215,7 +222,6 @@ def game_start():
         for dx in range(0, x_count - x):
             for dy in range(0, y_count - y):
                 can_move = game_can_move_block(x, y, dx, dy)
-
 
                 positions = game_find_same_block(x, y)
                 for x1, y1 in positions:
