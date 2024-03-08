@@ -127,7 +127,7 @@ def detect_fill_blocks():
         print(f'{name}: ', end='')
         for result in groups:
             print(f'({result[0]},{result[1]}) ', end='')
-            blocks[result[0]][result[1]]['name'] = name
+            blocks[result[0]][result[1]] = name
         print()
 
     print()
@@ -136,7 +136,7 @@ def detect_fill_blocks():
     for y in range(0, y_count):
         print(f'{"%02d" % y} |', end='')
         for x in range(0, x_count):
-            name = blocks[x][y]['name']
+            name = blocks[x][y]
             print(f' {name} |', end='')
         print()
         print('   -------------------------------------------------------------')
@@ -144,7 +144,7 @@ def detect_fill_blocks():
 
 def check_game_success():
     for x, y in travel_game_blocks():
-        if blocks[x][y]['active']:
+        if len(blocks[x][y]) > 0:
             return False
     return True
 
@@ -157,7 +157,7 @@ def travel_game_blocks():
 
 def travel_game_active_blocks():
     for x, y in travel_game_blocks():
-        if blocks[x][y]['active']:
+        if len(blocks[x][y]) > 0:
             yield x, y
 
 
@@ -165,7 +165,7 @@ def travel_game_same_blocks(x, y):
     for i, j in travel_game_active_blocks():
         if x == i and y == j:
             continue
-        if blocks[x][y]['name'] == blocks[i][j]['name']:
+        if blocks[x][y] == blocks[i][j]:
             yield i, j
 
 
@@ -174,7 +174,7 @@ def is_block2block_x_near(x1, y1, x2, y2):
     if y1 != y2:
         return False
     for x in range(min(x1, x2) + 1, max(x1, x2)):
-        if blocks[x][y1]['active']:
+        if len(blocks[x][y1]) > 0:
             return False
     return True
 
@@ -184,54 +184,91 @@ def is_block2block_y_near(x1, y1, x2, y2):
     if x1 != x2:
         return False
     for y in range(min(y1, y2) + 1, max(y1, y2)):
-        if blocks[x1][y]['active']:
+        if len(blocks[x1][y]):
             return False
     return True
 
 
-def resolve_move_y(x, y, dy):
-    pass
-
-
-# 竖直移动，消除水平方向
+# 竖直移动，水平消除
 def resolve_block2block_move_y(x1, y1, x2, y2):
     # 水平直接想通
     if is_block2block_x_near(x1, y1, x2, y2):
-        return 0, []
+        return True, 0, 0, []
 
     # 竖直方向移动也不可能水平相同
     if not is_block2block_x_near(x1, y2, x2, y2):
-        return 0, None
+        return False, 0, 0, None
 
     dy = y2 - y1
     if dy < 0:
         # 上移
-        y_blocks = [(x1, y1)]
+        m_positions = [(x1, y1)]
         for y in range(y1 - 1, -1, -1):
-            if not blocks[x1][y]['active']:
+            if len(blocks[x1][y]) == 0:
                 break
-            y_blocks.append((x1, y))
-        block = y_blocks[-1]
+            m_positions.append((x1, y))
+        block = m_positions[-1]
         if block[1] + dy >= 0:
-            return dy, y_blocks[1:]
+            return True, 0, dy, m_positions[1:]
         else:
-            return 0, None
+            return False, 0, 0, None
 
     # 下移
-    y_blocks = [(x1, y1)]
+    m_positions = [(x1, y1)]
     for y in range(y1 + 1, y_count):
-        if not blocks[x1][y]['active']:
+        if len(blocks[x1][y]) == 0:
             break
-        y_blocks.append((x1, y))
-    block = y_blocks[-1]
+        m_positions.append((x1, y))
+    block = m_positions[-1]
     if block[1] + dy < y_count:
-        return dy, y_blocks[1:]
+        return True, 0, dy, m_positions[1:]
     else:
-        return 0, None
+        return False, 0, 0, None
 
 
-def back_resolve_block_to_block(x1, y1, x2, y2):
-    return True
+# 水平移动，竖直消除
+def resolve_block2block_move_x(x1, y1, x2, y2):
+    # 水平想通
+    if is_block2block_x_near(x1, y1, x2, y2):
+        return True, 0, 0, []
+
+    # 竖直想通
+    if is_block2block_y_near(x1, y1, x2, y2):
+        return True, 0, 0, []
+
+    # 水平方向移动也不可能竖直相同
+    if not is_block2block_y_near(x2, y1, x2, y2):
+        return False, 0, 0, None
+
+    # 竖直方向移动也不可能水平相同
+    if not is_block2block_x_near(x1, y2, x2, y2):
+        return False, 0, 0, None
+
+    dx = x2 - x1
+    if dx < 0:
+        # 左移
+        m_positions = [(x1, y1)]
+        for x in range(x1 - 1, -1, -1):
+            if len(blocks[x][y1]) == 0:
+                break
+            m_positions.append((x, y1))
+        block = m_positions[-1]
+        if block[0] + dx >= 0:
+            return True, dx, 0, m_positions[1:]
+        else:
+            return False, 0, 0, None
+
+    # 右移
+    m_positions = [(x1, y1)]
+    for x in range(x1 + 1, x_count):
+        if len(blocks[x][y1]) == 0:
+            break
+        m_positions.append((x, y1))
+    block = m_positions[-1]
+    if block[0] + dx < x_count:
+        return True, dx, 0, m_positions[1:]
+    else:
+        return False, 0, 0, None
 
 
 def start_game():
@@ -242,12 +279,22 @@ def start_game():
     can_next = False
     for x1, y1 in travel_game_active_blocks():
         for x2, y2 in travel_game_same_blocks(x1, y1):
-            result = resolve_block2block_move_y(x1, y1, x2, y2)
-            if result:
-                can_next = True
-                if start_game():
-                    return True
-            back_resolve_block_to_block(x1, y1, x2, y2)
+
+            result, dy, m_positions = resolve_block2block_move_y(x1, y1, x2, y2)
+            if not result:
+                continue
+            can_next = True
+            name = blocks[x1][y1]
+            blocks[x1][y1] = ''
+            blocks[x2][y2] = ''
+            for mx, my in m_positions:
+                blocks[mx][my + dy] = blocks[mx][my]
+            if start_game():
+                return True
+            for mx, my in m_positions:
+                blocks[mx][my] = blocks[mx][my + dy]
+            blocks[x1][y1] = name
+            blocks[x2][y2] = name
 
     if not can_next:
         print('can\'t next')
@@ -255,6 +302,6 @@ def start_game():
 
 
 if __name__ == '__main__':
-    blocks = [[{'name': '', 'active': True} for _ in range(0, y_count)] for _ in range(0, x_count)]
+    blocks = [['' for _ in range(0, y_count)] for _ in range(0, x_count)]
     detect_fill_blocks()
-    start_game()
+    # start_game()
