@@ -3,6 +3,8 @@ import sys
 import cv2
 import numpy as np
 
+root_dir = '/Users/zhouzhenliang/Desktop/zlz/'
+
 hist_channels = [0, 1, 2]
 hist_size = [8, 8, 8]
 hist_ranges = [0, 256, 0, 256, 0, 256]
@@ -78,12 +80,24 @@ def compare_hash(hash1, hash2):
     return 1.0 - n / len(hash1)
 
 
+def print_blocks():
+    print()
+    print('      0     1     2     3     4     5     6     7     8     9   ')
+    print('   -------------------------------------------------------------')
+    for y in range(0, y_count):
+        print(f'{"%02d" % y} |', end='')
+        for x in range(0, x_count):
+            name = blocks[x][y]
+            print(f' {"%3s" % name} |', end='')
+        print()
+        print('   -------------------------------------------------------------')
+
+
 def detect_fill_blocks():
     """
     利用图像识别技术输出命名方块矩阵
     :return:
     """
-    root_dir = '/Users/zhouzhenliang/Desktop/zlz/'
     img = cv2.imread(f'{root_dir}/src_1.jpg')
     print(f'srcImage = {img.shape}')
     h, w = img.shape[:2]
@@ -130,18 +144,6 @@ def detect_fill_blocks():
         for result in groups:
             print(f'({result[0]},{result[1]}) ', end='')
             blocks[result[0]][result[1]] = name
-        print()
-
-    print()
-    print('      0     1     2     3     4     5     6     7     8     9   ')
-    print('   -------------------------------------------------------------')
-    for y in range(0, y_count):
-        print(f'{"%02d" % y} |', end='')
-        for x in range(0, x_count):
-            name = blocks[x][y]
-            print(f' {name} |', end='')
-        print()
-        print('   -------------------------------------------------------------')
 
 
 def check_game_success():
@@ -268,6 +270,19 @@ def resolve_block2block_move_x(x1, y1, x2, y2):
 actions = []
 
 
+def show_blocks():
+    print('--------------------------- show ---------------------------')
+    print_blocks()
+    w = 100
+    h = 101
+    img = np.empty((y_count * h, x_count * w, 3), np.uint8)
+    for x, y in travel_game_active_blocks():
+        path = f'{root_dir}/z_out_{x}-{y}.jpg'
+        img[y * h:y * h + h, x * w:x * w + w] = cv2.imread(path)
+    cv2.imshow('blocks', img)
+    cv2.waitKey(0)
+
+
 def start_game(deep):
     if check_game_success():
         print('--------------------------- game success ---------------------------')
@@ -281,12 +296,15 @@ def start_game(deep):
             result, dy, m_positions = resolve_block2block_move_y(x1, y1, x2, y2)
             if not result:
                 continue
-            actions.append(f'({x1}, {y1}) - ({x2}, {y2})')
+            action = f'({x1}, {y1}) - ({x2}, {y2})'
+            print(action)
+            actions.append(action)
             name = blocks[x1][y1]
             blocks[x1][y1] = ''
             blocks[x2][y2] = ''
             for mx, my in m_positions:
                 blocks[mx][my + dy] = blocks[mx][my]
+            show_blocks()
             if start_game(deep + 1):
                 return True
             for mx, my in m_positions:
@@ -294,18 +312,22 @@ def start_game(deep):
             blocks[x1][y1] = name
             blocks[x2][y2] = name
             actions.pop()
+            show_blocks()
 
         for x2, y2 in travel_game_same_blocks(x1, y1):
             # 水平移动
             result, dx, m_positions = resolve_block2block_move_x(x1, y1, x2, y2)
             if not result:
                 continue
-            actions.append(f'({x1}, {y1}) - ({x2}, {y2})')
+            action = f'({x1}, {y1}) - ({x2}, {y2})'
+            print(action)
+            actions.append(action)
             name = blocks[x1][y1]
             blocks[x1][y1] = ''
             blocks[x2][y2] = ''
             for mx, my in m_positions:
                 blocks[mx + dx][my] = blocks[mx][my]
+            show_blocks()
             if start_game(deep + 1):
                 return True
             for mx, my in m_positions:
@@ -313,6 +335,7 @@ def start_game(deep):
             blocks[x1][y1] = name
             blocks[x2][y2] = name
             actions.pop()
+            show_blocks()
 
     return False
 
@@ -321,4 +344,5 @@ if __name__ == '__main__':
     sys.setrecursionlimit(1000000)
     blocks = [['' for _ in range(0, y_count)] for _ in range(0, x_count)]
     detect_fill_blocks()
+    print_blocks()
     start_game(0)
